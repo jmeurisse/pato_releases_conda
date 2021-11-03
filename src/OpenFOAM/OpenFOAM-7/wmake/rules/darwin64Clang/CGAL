@@ -1,7 +1,0 @@
-CGAL_INC = \
-    -I$(CGAL_ARCH_PATH)/include \
-    -I$(MPFR_ARCH_PATH)/include \
-    -I$(GMP_ARCH_PATH)/include \
-    -I$(BOOST_ARCH_PATH)/include
-
-CGAL_LIBS =
