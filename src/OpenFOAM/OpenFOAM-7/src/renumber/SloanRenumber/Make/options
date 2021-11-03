@@ -1,0 +1,23 @@
+EXE_INC = \
+    -I$(BOOST_ARCH_PATH)/include \
+    -I$(LIB_SRC)/meshTools/lnInclude \
+    -I$(LIB_SRC)/parallel/decompose/decompositionMethods/lnInclude \
+    -I$(LIB_SRC)/renumber/renumberMethods/lnInclude
+
+LIB_LIBS = \
+    -L$(BOOST_ARCH_PATH)/lib \
+    -lmeshTools \
+    -ldecompositionMethods \
+    -lrenumberMethods
+
+ifeq ("$(shell uname -s)","Darwin")
+SO = dylib
+else
+SO = so
+endif
+
+ifneq ("$(wildcard $(BOOST_ARCH_PATH)/lib/libboost_system-mt.$(SO))","")
+LIB_LIBS += -lboost_system-mt
+else
+LIB_LIBS += -lboost_system
+endif
