@@ -80,7 +80,6 @@ print("Running the loop...")
 for dir_i in dirs:
     for sub_dir_i in sub_dirs:
         my_path=dir_i+"/"+sub_dir_i
-        #files=[join(my_path, f).replace(src_dir,"$SRC_DIR") for f in listdir(my_path) if isfile(join(my_path, f))]
         files=get_files(my_path)
         my_path=my_path.replace(src_dir,"$SRC_DIR")
         print("Copy files from "+my_path+" to $PREFIX/"+sub_dir_i)
