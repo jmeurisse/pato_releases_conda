@@ -13,6 +13,17 @@ import subprocess
 import sys
 
 ### Functions
+def get_files(path):
+    """ Store all the file names in a list
+    :param path: Path of the directory
+    :return: return the list of file names
+    """
+    filelist = []
+    for root, dirs, files in os.walk(path):
+        for file in files:
+            filelist.append(os.path.join(root,file)) #append the file name to the list
+    return filelist
+
 def get_folders(list):
     """ Get the folders of the executbles and libraries
     :param list: list of the executables/libraries
@@ -69,14 +80,25 @@ print("Running the loop...")
 for dir_i in dirs:
     for sub_dir_i in sub_dirs:
         my_path=dir_i+"/"+sub_dir_i
-        files=[join(my_path, f).replace(src_dir,"$SRC_DIR") for f in listdir(my_path) if isfile(join(my_path, f))]
+        #files=[join(my_path, f).replace(src_dir,"$SRC_DIR") for f in listdir(my_path) if isfile(join(my_path, f))]
+        files=get_files(my_path)
         my_path=my_path.replace(src_dir,"$SRC_DIR")
         print("Copy files from "+my_path+" to $PREFIX/"+sub_dir_i)
         print("Modify the path of the libraries in $PREFIX/"+sub_dir_i)
         for file_i in files:
-            new_file_i="$PREFIX/"+sub_dir_i+"/"+os.path.basename(file_i)
-            cmd="scp "+file_i+" "+new_file_i
-            os.system(cmd)
+            file_i=file_i.replace(src_dir,"$SRC_DIR")
+            dir_lib_i=os.path.dirname(file_i).replace(my_path,"")
+            if dir_lib_i != "": # folder in sub_dir_i
+                if not os.path.exists("$PREFIX/"+sub_dir_i+dir_lib_i):
+                    cmd="mkdir -p $PREFIX/"+sub_dir_i+dir_lib_i
+                    os.system(cmd)
+                new_file_i="$PREFIX/"+sub_dir_i+dir_lib_i+"/"+os.path.basename(file_i)
+                cmd="scp "+file_i+" "+new_file_i
+                os.system(cmd)
+            else: # directly in sub_dir_i
+                new_file_i="$PREFIX/"+sub_dir_i+"/"+os.path.basename(file_i)
+                cmd="scp "+file_i+" "+new_file_i
+                os.system(cmd)
             cmd="otool -L " + file_i
             otool_output = subprocess.Popen([cmd],shell=True,stdout=subprocess.PIPE).communicate()[0].decode("utf-8")
             libs_path=parse_otool_output(otool_output)
