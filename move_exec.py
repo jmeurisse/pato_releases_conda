@@ -93,11 +93,10 @@ for dir_i in dirs:
                     os.system(cmd)
                 new_file_i="$PREFIX/"+sub_dir_i+dir_lib_i+"/"+os.path.basename(file_i)
                 cmd="scp "+file_i+" "+new_file_i
-                os.system(cmd)
             else: # directly in sub_dir_i
                 new_file_i="$PREFIX/"+sub_dir_i+"/"+os.path.basename(file_i)
                 cmd="scp "+file_i+" "+new_file_i
-                os.system(cmd)
+            os.system(cmd)
             cmd="otool -L " + file_i
             otool_output = subprocess.Popen([cmd],shell=True,stdout=subprocess.PIPE).communicate()[0].decode("utf-8")
             libs_path=parse_otool_output(otool_output)
@@ -105,10 +104,14 @@ for dir_i in dirs:
                 if src_dir in lib_path_i:
                     file_name=os.path.basename(new_file_i)
                     lib_name=os.path.basename(lib_path_i)
-                    new_path="$PREFIX/lib/"+lib_name
                     if lib_name == file_name:
                         cmd="install_name_tool -id "+new_file_i+" "+new_file_i
                     else:
+                        dir_lib_j=os.path.basename(os.path.dirname(lib_path_i))
+                        if dir_lib_j != "lib": # folder in sub_dir_i
+                            new_path="$PREFIX/lib/"+dir_lib_j+"/"+lib_name
+                        else: # directly in sub_dir_i
+                            new_path="$PREFIX/lib/"+lib_name
                         cmd="install_name_tool -change " + lib_path_i + " " + new_path + " " + new_file_i
                     os.system(cmd)
                     
