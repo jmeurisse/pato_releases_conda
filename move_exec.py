@@ -70,6 +70,14 @@ def env_var_exists(env_var):
 src_dir=env_var_exists('SRC_DIR')
 prefix_dir=env_var_exists('PREFIX')
 
+### Copy the scripts
+cmd_name="wmake"
+cmd="find $SRC_DIR -name "+cmd_name+" -type f | tail -n 1"
+folder=subprocess.Popen([cmd],shell=True, stdout=subprocess.PIPE).communicate()[0].decode("utf-8")
+folder=os.path.dirname(folder)
+cmd="scp -r "+folder+"/* $PREFIX/bin/"
+os.system(cmd)
+
 ### Get folders of executables and libraries
 list_exec=["blockMesh","mppequil","PATOx"] # OpenFOAM, Mutation++, and PATO executables
 dirs=get_folders(list_exec) # OpenFOAM, Mutation++, and PATO  prefixes
@@ -100,18 +108,23 @@ for dir_i in dirs:
             cmd="otool -L " + file_i
             otool_output = subprocess.Popen([cmd],shell=True,stdout=subprocess.PIPE).communicate()[0].decode("utf-8")
             libs_path=parse_otool_output(otool_output)
+            if ".o" not in os.path.basename(new_file_i):
+                # Change rpath
+                cmd="install_name_tool -add_rpath \"@executable_path/../lib\" "+new_file_i
+                os.system(cmd)
             for lib_path_i in libs_path:
                 if src_dir in lib_path_i:
                     file_name=os.path.basename(new_file_i)
                     lib_name=os.path.basename(lib_path_i)
+                    new_file_path="@rpath/"+file_name
                     if lib_name == file_name:
-                        cmd="install_name_tool -id "+new_file_i+" "+new_file_i
+                        cmd="install_name_tool -id "+new_file_path+" "+new_file_i
                     else:
                         dir_lib_j=os.path.basename(os.path.dirname(lib_path_i))
                         if dir_lib_j != "lib": # folder in sub_dir_i
-                            new_path="$PREFIX/lib/"+dir_lib_j+"/"+lib_name
+                            new_path="@rpath/"+dir_lib_j+"/"+lib_name
                         else: # directly in sub_dir_i
-                            new_path="$PREFIX/lib/"+lib_name
+                            new_path="@rpath/"+lib_name
                         cmd="install_name_tool -change " + lib_path_i + " " + new_path + " " + new_file_i
                     os.system(cmd)
                     
