@@ -68,64 +68,48 @@ def env_var_exists(env_var):
 
 ### Check if the SRC_DIR environment variable exists
 src_dir=env_var_exists('SRC_DIR')
-prefix_dir=env_var_exists('PREFIX')
-
-### Copy the scripts
-cmd_name="wmake"
-cmd="find $SRC_DIR -name "+cmd_name+" -type f | tail -n 1"
-folder=subprocess.Popen([cmd],shell=True, stdout=subprocess.PIPE).communicate()[0].decode("utf-8")
-folder=os.path.dirname(folder)
-cmd="scp -r "+folder+"/* $PREFIX/bin/"
-os.system(cmd)
 
 ### Get folders of executables and libraries
 list_exec=["blockMesh","mppequil","PATOx"] # OpenFOAM, Mutation++, and PATO executables
 dirs=get_folders(list_exec) # OpenFOAM, Mutation++, and PATO  prefixes
 sub_dirs=["bin","lib"]
 
-### Copy the files and change the path of the libraries
+### Verify dirs
+for i,dir_i in enumerate(dirs):
+    if src_dir not in dir_i:
+        print("Error: "+list_exec[i]+" not found.",file=sys.stderr)
+        sys.exit()
+
+### Change the path of the libraries
 print("Running the loop...")
 for dir_i in dirs:
     for sub_dir_i in sub_dirs:
         my_path=dir_i+"/"+sub_dir_i
         files=get_files(my_path)
         my_path=my_path.replace(src_dir,"$SRC_DIR")
-        print("Copy files from "+my_path+" to $PREFIX/"+sub_dir_i)
-        print("Modify the path of the libraries in $PREFIX/"+sub_dir_i)
+        print("Modify the path of the libraries in "+my_path)
         for file_i in files:
             file_i=file_i.replace(src_dir,"$SRC_DIR")
-            dir_lib_i=os.path.dirname(file_i).replace(my_path,"")
-            if dir_lib_i != "": # folder in sub_dir_i
-                if not os.path.exists("$PREFIX/"+sub_dir_i+dir_lib_i):
-                    cmd="mkdir -p $PREFIX/"+sub_dir_i+dir_lib_i
-                    os.system(cmd)
-                new_file_i="$PREFIX/"+sub_dir_i+dir_lib_i+"/"+os.path.basename(file_i)
-                cmd="scp "+file_i+" "+new_file_i
-            else: # directly in sub_dir_i
-                new_file_i="$PREFIX/"+sub_dir_i+"/"+os.path.basename(file_i)
-                cmd="scp "+file_i+" "+new_file_i
-            os.system(cmd)
             cmd="otool -L " + file_i
             otool_output = subprocess.Popen([cmd],shell=True,stdout=subprocess.PIPE).communicate()[0].decode("utf-8")
             libs_path=parse_otool_output(otool_output)
-            if ".o" not in os.path.basename(new_file_i):
-                # Change rpath
-                cmd="install_name_tool -add_rpath \"@executable_path/../lib\" "+new_file_i
-                os.system(cmd)
             for lib_path_i in libs_path:
                 if src_dir in lib_path_i:
-                    file_name=os.path.basename(new_file_i)
+                    file_name=os.path.basename(file_i)
                     lib_name=os.path.basename(lib_path_i)
                     new_file_path="@rpath/"+file_name
                     if lib_name == file_name:
-                        cmd="install_name_tool -id "+new_file_path+" "+new_file_i
+                        cmd="install_name_tool -id "+new_file_path+" "+file_i
                     else:
                         dir_lib_j=os.path.basename(os.path.dirname(lib_path_i))
                         if dir_lib_j != "lib": # folder in sub_dir_i
                             new_path="@rpath/"+dir_lib_j+"/"+lib_name
                         else: # directly in sub_dir_i
                             new_path="@rpath/"+lib_name
-                        cmd="install_name_tool -change " + lib_path_i + " " + new_path + " " + new_file_i
+                        cmd="install_name_tool -change " + lib_path_i + " " + new_path + " " + file_i
                     os.system(cmd)
-                    
+            if ".o" not in os.path.basename(file_i):
+                # Change rpath
+                cmd="install_name_tool -add_rpath \"@executable_path/../lib\" "+file_i
+                os.system(cmd)
 print("End of the move_exec.py script.")
