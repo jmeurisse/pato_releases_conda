@@ -119,5 +119,7 @@ for i,dir_i in enumerate(dirs):
                 if i == pato_index:
                     cmd="install_name_tool -add_rpath \"@executable_path/../../../../OpenFOAM/OpenFOAM-7/platforms/"+of_platform_name+"/lib\" "+file_i
                     os.system(cmd)
+                    cmd="install_name_tool -add_rpath \"@executable_path/../../src/thirdParty/mutation++/install/lib\" "+file_i
+                    os.system(cmd)
 
 print("End of the move_exec.py script.")
