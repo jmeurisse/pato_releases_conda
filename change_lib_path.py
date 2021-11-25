@@ -73,6 +73,10 @@ src_dir=env_var_exists('SRC_DIR')
 list_exec=["blockMesh","mppequil","PATOx"] # OpenFOAM, Mutation++, and PATO executables
 dirs=get_folders(list_exec) # OpenFOAM, Mutation++, and PATO  prefixes
 sub_dirs=["bin","lib"]
+of_index=list_exec.index("blockMesh")
+mpp_index=list_exec.index("mppequil")
+pato_index=list_exec.index("PATOx")
+of_platform_name=os.path.basename(dirs[of_index])
 
 ### Verify dirs
 for i,dir_i in enumerate(dirs):
@@ -82,7 +86,7 @@ for i,dir_i in enumerate(dirs):
 
 ### Change the path of the libraries
 print("Running the loop...")
-for dir_i in dirs:
+for i,dir_i in enumerate(dirs):
     for sub_dir_i in sub_dirs:
         my_path=dir_i+"/"+sub_dir_i
         files=get_files(my_path)
@@ -112,4 +116,8 @@ for dir_i in dirs:
                 # Change rpath
                 cmd="install_name_tool -add_rpath \"@executable_path/../lib\" "+file_i
                 os.system(cmd)
+                if i == pato_index:
+                    cmd="install_name_tool -add_rpath \"@executable_path/../../../../OpenFOAM/OpenFOAM-7/platforms/"+of_platform_name+"/lib\" "+file_i
+                    os.system(cmd)
+
 print("End of the move_exec.py script.")
