@@ -122,4 +122,4 @@ for i,dir_i in enumerate(dirs):
                     cmd="install_name_tool -add_rpath \"@executable_path/../../src/thirdParty/mutation++/install/lib\" "+file_i
                     os.system(cmd)
 
-print("End of the move_exec.py script.")
+print("End of the change_lib_path_macos.py script.")
