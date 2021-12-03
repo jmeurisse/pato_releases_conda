@@ -31,26 +31,11 @@ def get_folders(list):
     """
     folders_list=[]
     for list_i in list:
-        cmd="find $SRC_DIR -name "+list_i+" -type f | tail -n 1"
+        cmd="find $SRC_DIR -name "+list_i+" -type f | head -n 1"
         folder=subprocess.Popen([cmd],shell=True, stdout=subprocess.PIPE).communicate()[0].decode("utf-8")
         folder=os.path.dirname(os.path.dirname(folder))
         folders_list.append(folder)
     return folders_list
-
-def parse_otool_output(otool_output):
-    """ Parse the output from otool -L
-    :param otool_output: output from otool function
-    :return: list of the libraries path
-    """
-    otool_output = otool_output.splitlines()
-    out_paths = []
-    extension=".dylib"
-    for line in otool_output:
-        if extension in line:
-            ind = line.find(extension)
-            out_paths.append(line[1:ind + len(extension)])
-
-    return out_paths
     
 def env_var_exists(env_var):
     """ Check if the environment variable exists
@@ -77,6 +62,8 @@ of_index=list_exec.index("blockMesh")
 mpp_index=list_exec.index("mppequil")
 pato_index=list_exec.index("PATOx")
 of_platform_name=os.path.basename(dirs[of_index])
+of_sub_dirs=next(os.walk(dirs[of_index]+"/lib"))[1]
+of_sub_dirs.remove("dummy")
 
 ### Verify dirs
 for i,dir_i in enumerate(dirs):
@@ -91,20 +78,19 @@ for i,dir_i in enumerate(dirs):
         my_path=dir_i+"/"+sub_dir_i
         files=get_files(my_path)
         my_path=my_path.replace(src_dir,"$SRC_DIR")
-        print("Modify the path of the libraries in "+my_path)
+        print("Modify the rpath of the libraries in "+my_path)
         for file_i in files:
-            file_i=file_i.replace(src_dir,"$SRC_DIR")
-            cmd="otool -L " + file_i
-            otool_output = subprocess.Popen([cmd],shell=True,stdout=subprocess.PIPE).communicate()[0].decode("utf-8")
-            libs_path=parse_otool_output(otool_output)
             if ".o" not in os.path.basename(file_i):
+                file_i=file_i.replace(src_dir,"$SRC_DIR")
                 # Change rpath
                 cmd="patchelf --set-rpath \"\\$ORIGIN/../lib\" "+file_i
                 os.system(cmd)
                 if i == pato_index:
-                    cmd="patchelf --set-rpath \"\\$ORIGIN/../../../../OpenFOAM/OpenFOAM-7/platforms/"+of_platform_name+"/lib\" "+file_i
-                    os.system(cmd)
-                    cmd="patchelf --set-rpath \"\\$ORIGIN/../../src/thirdParty/mutation++/install/lib\" "+file_i
+                    new_rpath="\\$ORIGIN/../../../../OpenFOAM/OpenFOAM-7/platforms/"+of_platform_name+"/lib:"+\
+                              "\\$ORIGIN/../../src/thirdParty/mutation++/install/lib"
+                    for of_sub_dir_i in of_sub_dirs:
+                        new_rpath+=":\\$ORIGIN/../../../../OpenFOAM/OpenFOAM-7/platforms/"+of_platform_name+"/lib/"+of_sub_dir_i
+                    cmd="patchelf --add-rpath \""+new_rpath+"\" "+file_i
                     os.system(cmd)
 
 print("End of the change_lib_path_linux.py script.")
